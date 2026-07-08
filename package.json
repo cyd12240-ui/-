@@ -1,0 +1,15 @@
+﻿{
+  "name": "texas-poker-friends",
+  "version": "1.0.0",
+  "private": true,
+  "description": "朋友局德州扑克 - WebSocket 实时多人联机",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node server/test-engine.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  }
+}

@@ -1,0 +1,17 @@
+﻿node_modules/
+.skillhub/
+.agents/
+skills/
+docs/
+_*.py
+_*.js
+*.log
+*.err
+*.txt
+start_server.bat
+start_server.vbs
+AGENTS.md
+current-progress.md
+HANDOFF.md
+CLAUDE_Donchitos.md
+sucai/
