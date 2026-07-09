@@ -368,7 +368,7 @@ function onQuickSpeech() {
       {t:"你们忍心就这么让我酱油了？",m:"words_3_1",f:"words_3_2"},
       {t:"我、我惹你们了吗？",m:"words_4_1",f:"words_4_2"},
       {t:"姑娘你真是条汉子",m:"words_5_1",f:"words_5_2"},
-      {t:"三十六计走为上",m:"words_6_1",f:"words_6_2"},
+      {t:"三十六计走为上，容我去去便回",m:"words_6_1",f:"words_6_2"},
       {t:"风吹鸡蛋壳，牌去人安乐",m:"words_9_1",f:"words_9_2"}
     ];
     var myCharId = 0;
@@ -495,10 +495,20 @@ function onQuickSpeech() {
       item.innerHTML =
         '<div class="avatar avatar-img"><img src="' + avatarImg + '" alt=""></div>' +
         '<div class="info"><div class="name">' + escapeHtml(p.nickname) + (p.id === state.playerId ? " (你)" : "") + "</div>" +
-        '<div class="score">积分: ' + p.score + "</div></div>" +
-        '<div class="status ' + statusClass + '">' + statusText + "</div>";
+       '<div class="score">积分: ' + p.score + "</div></div>" +
+        '<div class="status ' + statusClass + '">' + statusText + "</div>" +
+        (state.isHost && isBot ? '<button class="rm-bot-btn" data-botid="' + p.id + '">✕</button>' : "");
       list.appendChild(item);
     }
+
+    // 机器人移除按钮委托
+    list.addEventListener("click", function(e) {
+      var btn = e.target.closest(".rm-bot-btn");
+      if (btn) {
+        var bid = btn.getAttribute("data-botid");
+        if (bid) PK.WSClient.send("remove_bot", { botId: bid });
+      }
+    });
 
     // 按钮状态
     var amReady = players.some(function (p) { return p.id === state.playerId && p.isReady; });
@@ -572,13 +582,20 @@ function onQuickSpeech() {
     if (PK.TableRenderer) PK.TableRenderer.showHandResult(data);
   }
 
-  function handleItemAnim(data) {
+ function handleItemAnim(data) {
     if (PK.PropAnim) {
       PK.PropAnim.init();
       PK.PropAnim.playItemAnimation(data);
     }
     if (data.itemType === "egg" && PK.TableRenderer && PK.TableRenderer.setEggSplat) {
       PK.TableRenderer.setEggSplat(data.toPlayerId);
+      // 8秒后自动清除蛋液黄色圈
+      if (window._eggSplatTimer) clearTimeout(window._eggSplatTimer);
+      window._eggSplatTimer = setTimeout(function() {
+        if (PK.TableRenderer && PK.TableRenderer.clearEggSplat) {
+          PK.TableRenderer.clearEggSplat();
+        }
+      }, 4000);
     }
   }
 

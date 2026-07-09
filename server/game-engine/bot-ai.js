@@ -22,7 +22,7 @@ function preFlopStrength(holeCards) {
     const gap = Math.abs(r1 - r2);
     const pair = r1 === r2 ? high + 0.3 : 0;
     const connected = gap === 1 ? 0.05 : gap === 2 ? 0.02 : 0;
-    return Math.min(1, Math.max(0.05, pair + high * 0.5 + suited + connected));
+    return Math.min(1, Math.max(0.05, pair + high * 0.85 + suited + connected));
 }
 
 /**
@@ -78,22 +78,23 @@ function decide(player, gameState, botLevel, handEvaluator) {
         return { action: "fold" };
     }
 
-    if (strength < raiseThresh) {
-        if (canCheck) return { action: "check" };
-        if (callAmount > 0 && callAmount <= player.score) {
-            if (strength > potOdds * 1.5 || potOdds < 0.2) {
-                return { action: "call", amount: callAmount };
-            }
-            return { action: "fold" };
-        }
-        return { action: "check" };
-    }
+   if (strength < raiseThresh) {
+       if (canCheck) return { action: "check" };
+       if (callAmount > 0 && callAmount <= player.score) {
+           if (strength > potOdds * 1.5 || potOdds < 0.2) {
+               return { action: "call", amount: callAmount };
+           }
+           return { action: "fold" };
+       }
+        // 不能过牌又跟不起 → 弃牌
+        return { action: "fold" };
+   }
 
     // Strong hand
     if (canRaise && canCheck === false) {
         var raiseAmt = Math.floor(Math.max(minRaise, pot * raiseMult));
         raiseAmt = Math.min(raiseAmt, player.score);
-        if (raiseAmt >= player.score) return { action: "allIn" };
+        if (raiseAmt >= player.score) return { action: "allin" };
         return { action: "raise", amount: raiseAmt };
     }
     if (callAmount > 0) return { action: "call", amount: callAmount };

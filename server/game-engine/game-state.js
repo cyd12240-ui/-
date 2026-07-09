@@ -38,9 +38,11 @@ class HandState {
       totalBetThisHand: 0,
       folded: false,
       allIn: false,
-      isDealer: i === dealerIndex,
-      isSmallBlind: false,
-      isBigBlind: false
+     isDealer: i === dealerIndex,
+     isSmallBlind: false,
+      isBigBlind: false,
+      isBot: !!p.isBot,
+      botLevel: p.botLevel || 0
     }));
 
     this.dealerIndex = dealerIndex;
@@ -160,7 +162,13 @@ class HandState {
       return;
     }
     if (active.length <= 1) {
-      this._handleLastManStanding();
+      const nonFolded = this.players.filter(function(p) { return !p.folded; });
+      if (nonFolded.length <= 1) {
+        this._handleLastManStanding();
+      } else {
+        this._dealRemainingCommunityCards();
+        this._goToShowdown();
+      }
       return;
     }
 
@@ -186,7 +194,12 @@ class HandState {
       if (idx === startIdx) break; // 安全退出
     }
 
-    this.lastAggressorIdx = -1;
+   this.lastAggressorIdx = -1;
+    var firstIdx = this.playersToAct.length > 0 ? this.playersToAct[0] : -1;
+    if (firstIdx >= 0 && this.players[firstIdx].isBot && !this.handOver) {
+      this._processBotAction(firstIdx);
+      return;
+    }
     this._emit('playerTurn', this._getTurnState());
   }
 
@@ -237,8 +250,13 @@ class HandState {
     // 检查下注轮次是否结束
     if (this._isBettingRoundOver()) {
       this._advancePhase();
-    } else {
+   } else {
       this._emit('playerTurn', this._getTurnState());
+      // 如果下一个是机器人，自动触发
+      var nextIdx2 = this.playersToAct.length > 0 ? this.playersToAct[0] : -1;
+      if (nextIdx2 >= 0 && this.players[nextIdx2].isBot && !this.handOver) {
+        this._processBotAction(nextIdx2);
+      }
     }
 
     return { success: true };
@@ -358,7 +376,7 @@ class HandState {
   /**
    * 判断下注轮次是否结束
    */
-  _isBettingRoundOver() {
+ _isBettingRoundOver() {
     const active = this.players.filter(p => !p.folded && !p.allIn);
 
     // 只剩一个活跃玩家 → 他直接赢
@@ -604,9 +622,39 @@ class HandState {
     actions.push('fold');
     if (player.score > 0) {
       actions.push('raise');
-      actions.push('allin');
-    }
-    return actions;
+   actions.push('allin');
+   }
+   return actions;
+ }
+
+  /**
+   * 自动处理机器人行动（AI 决策 + 执行）
+   */
+  _processBotAction(playerIdx) {
+    const player = this.players[playerIdx];
+    if (!player || !player.isBot || this.handOver) return;
+    const callAmount = this.currentBet - player.currentBet;
+    const gs = {
+      callAmount: Math.max(0, callAmount),
+      pot: this.players.reduce(function(s, p) { return s + p.totalBetThisHand; }, 0),
+      communityCards: this.communityCards,
+      minRaise: this.minRaise,
+      canCheck: callAmount <= 0,
+      canRaise: player.score > callAmount * 2 || player.score > this.minRaise
+    };
+    const self = this;
+    setTimeout(function() {
+      if (self.handOver) return;
+      if (self.playersToAct.length === 0 || self.playersToAct[0] !== playerIdx) return;
+     try {
+        var d = BotAI.decide(player, gs, player.botLevel || 0, HandEvaluator);
+        var r = self.processAction(player.id, d.action, d.amount || 0);
+        if (r && r.error) { self.processAction(player.id, 'fold', 0); }
+      } catch(e) {
+        console.error('[Bot] AI error:', e);
+        self.processAction(player.id, 'fold', 0);
+      }
+    }, 300 + Math.random() * 400);
   }
 }
 

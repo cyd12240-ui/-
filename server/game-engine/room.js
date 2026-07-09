@@ -367,7 +367,8 @@ function getRoomPublic(room) {
       score: p.score,
       isHost: p.isHost,
       isReady: p.isReady,
-      isConnected: p.isConnected
+      isConnected: p.isConnected,
+      isBot: !!p.isBot
     })),
     settings: room.settings,
     handCount: room.handCount
