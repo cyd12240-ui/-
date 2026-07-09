@@ -293,6 +293,54 @@ function _sendTo(player, type, data) {
 /**
  * 获取房间
  */
+
+
+/**
+ * 添加机器人
+ */
+function addBot(code, hostId, botLevel) {
+  const room = rooms.get(code);
+  if (!room) return { error: 'room_not_found' };
+  if (room.hostId !== hostId) return { error: 'not_host' };
+  if (room.phase !== 'waiting') return { error: 'game_in_progress' };
+  if (room.players.length >= room.settings.maxPlayers) return { error: 'room_full' };
+
+  const botId = 'bot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+  const botNames = { 0: "Bot-简单", 1: "Bot-普通", 2: "Bot-困难" };
+  const botName = botNames[botLevel] || "Bot";
+
+  const bot = {
+    id: botId,
+    nickname: botName,
+    avatarId: 0,
+    score: room.settings.initialScore,
+    isHost: false,
+    isReady: true,
+    isConnected: true,
+    isBot: true,
+    botLevel: botLevel || 0,
+    ws: null
+  };
+
+  room.players.push(bot);
+  return { room, botId };
+}
+
+/**
+ * 移除机器人（仅房主）
+ */
+function removeBot(code, hostId, botId) {
+  const room = rooms.get(code);
+  if (!room) return { error: 'room_not_found' };
+  if (room.hostId !== hostId) return { error: 'not_host' };
+
+  const idx = room.players.findIndex(p => p.id === botId && p.isBot);
+  if (idx === -1) return { error: 'bot_not_found' };
+  room.players.splice(idx, 1);
+  return { room };
+}
+
+
 function getRoom(code) {
   return rooms.get(code);
 }
@@ -347,6 +395,8 @@ function updateSettings(code, hostId, newSettings) {
 }
 
 module.exports = {
+  addBot,
+  removeBot,
   createRoom,
   joinRoom,
   leaveRoom,

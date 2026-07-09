@@ -298,18 +298,37 @@ ItemType: "egg" | "flower"
 
 ### 通信架构
 
-```
-                     [Server: Node.js + Express + ws]
-                     /          |           \
-                    /           |            \
-   Browser (玩家A)   Browser (玩家B)   Browser (玩家C)
-       WebSocket       WebSocket        WebSocket
+```mermaid
+graph TB
+    subgraph Client["客户端 (Browser)"]
+        A1["HTML/CSS<br/>UI Overlay"]
+        A2["Canvas 2D<br/>牌桌渲染"]
+        A3["WS Client<br/>WebSocket 通信"]
+    end
+
+    subgraph Server["服务端 (Node.js)"]
+        B1["Express<br/>HTTP + 静态文件"]
+        B2["WS Handler<br/>消息分发路由"]
+        B3["Room Manager<br/>房间生命周期"]
+        B4["Game Loop<br/>牌局主循环"]
+        B5["State Machine<br/>Preflop->Flop->Turn->River->Showdown"]
+        B6["Pot Engine<br/>边池计算"]
+        B7["Hand Evaluator<br/>牌型判定"]
+    end
+
+    Client -->|"WebSocket<br/>JSON 消息"| B2
+    B2 --> B3
+    B2 --> B4
+    B4 --> B5
+    B4 --> B6
+    B4 --> B7
+    B3 -.->|"房间状态"| B4
+    B2 -.->|"广播事件"| Client
 ```
 
 - **服务器权威（Server Authoritative）**：所有牌局逻辑在服务端计算
 - 客户端发送操作指令，服务器验证合法性、执行状态转换、广播状态更新
 - 客户端不直接修改游戏状态，只响应服务端推送的事件
-
 ### 房间流程
 
 1. 玩家 A 打开页面 -> 输入昵称 -> 点击"创建房间" -> 获得 4 位房间码
@@ -378,6 +397,61 @@ ItemType: "egg" | "flower"
 - 服务端牌局逻辑（牌型、边池）用 Node.js 单元测试
 - 客户端渲染通过手动在浏览器中验证
 - WebSocket 通信用多标签页手动测试
+
+## 边池计算流程
+
+### 算法流程
+
+```mermaid
+flowchart TD
+    Start["牌局进入摊牌阶段"] --> Sort["将玩家按总下注额升序排列"]
+    Sort --> Init["prevLevel = 0, potId = 0"]
+    Init --> Next{"还有未处理的<br/>下注层级?"}
+
+    Next -->|"是"| SkipSame{"当前层级 = prevLevel?"}
+    SkipSame -->|"是"| SkipLevel["层级已处理，跳过"]
+    SkipLevel --> Next
+
+    SkipSame -->|"否"| CalcDiff["diff = 当前层级 - prevLevel<br/>contributorCount = totalBet >= 层级的玩家人数"]
+    CalcDiff --> Eligible["筛选可赢取者:<br/>!folded && totalBet >= 层级"]
+    Eligible --> NoElig{"可赢取人数 > 0?"}
+
+    NoElig -->|"否"| SkipPot["跳过此池"]
+    SkipPot --> Next
+
+    NoElig -->|"是"| CreatePot["创建 Pot: amount = diff * contributorCount<br/>eligiblePlayerIds = 筛选结果"]
+    CreatePot --> Advance["prevLevel = 当前层级"]
+    Advance --> Next
+
+    Next -->|"所有层级处理完毕"| Distribute["分发阶段:<br/>对每个池分别找最强手牌"]
+    Distribute --> HasTie{"该池存在平局?"}
+    HasTie -->|"是"| Split["Math.floor(金额 / 赢家数)<br/>均分给各赢家"]
+    HasTie -->|"否"| Winner["全部归唯一赢家"]
+    Split --> Done["返回 Pot[] 分配结果"]
+    Winner --> Done
+```
+
+### 三级边池示例
+
+以 3 名玩家下注为例，演示边池拆分逻辑：
+
+- 玩家 A：All-in 20 分
+- 玩家 B：Call 50 分
+- 玩家 C：Raise 到 100 分
+
+```mermaid
+flowchart LR
+    subgraph Pots["底池拆分结果"]
+        direction LR
+        P1["主池<br/>20 x 3 = 60<br/>可赢: A B C"]
+        P2["边池1<br/>30 x 2 = 60<br/>可赢: B C"]
+        P3["边池2<br/>50 x 1 = 50<br/>可赢: C"]
+    end
+
+    P1 --> P2 --> P3
+```
+
+> 注意：已弃牌的玩家虽不参与赢取池子，但其下注会计入该层级的 contributorCount。
 
 ## 文件组织
 

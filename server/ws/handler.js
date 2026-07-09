@@ -73,6 +73,8 @@ function handleMessage(ws, raw) {
       case 'ready': return handleReady(ws, data);
       case 'kick_player': return handleKickPlayer(ws, data);
       case 'change_character': return handleChangeChar(ws, data);
+      case 'add_bot': return handleAddBot(ws, data);
+      case 'remove_bot': return handleRemoveBot(ws, data);
       case 'update_settings': return handleUpdateSettings(ws, data);
       case 'send_speech': return handleSendSpeech(ws, data);
       case 'ping': return handlePing(ws);
@@ -267,6 +269,7 @@ function handleUseItem(ws, data) {
     fromNickname: player.nickname,
     toNickname: target.nickname
   });
+
 }
 
 /**
@@ -352,6 +355,40 @@ function handlePing(ws) {
   ws.send(JSON.stringify({ type: "pong", data: { time: Date.now() } }));
 }
 
+
+
+
+function handleAddBot(ws, data) {
+  if (!ws.roomCode) { ws.send(errorMsg('not_in_room', '不在房间中')); return; }
+  const level = (data && data.level) || 0;
+  const result = Room.addBot(ws.roomCode, ws.playerId, level);
+  if (result && result.error) {
+    ws.send(errorMsg(result.error, {
+      room_not_found: '房间不存在', not_host: '你不是房主',
+      game_in_progress: '游戏已经开始', room_full: '房间已满'
+    }[result.error] || result.error));
+    return;
+  }
+  if (result && result.room) {
+    Room._broadcast(result.room, 'room_update', Room.getRoomPublic(result.room));
+  }
+}
+
+function handleRemoveBot(ws, data) {
+  if (!ws.roomCode) { ws.send(errorMsg('not_in_room', '不在房间中')); return; }
+  const botId = data && data.botId;
+  if (!botId) { ws.send(errorMsg('invalid_input', '缺少机器人ID')); return; }
+  const result = Room.removeBot(ws.roomCode, ws.playerId, botId);
+  if (result && result.error) {
+    ws.send(errorMsg(result.error, {
+      room_not_found: '房间不存在', not_host: '你不是房主', bot_not_found: '机器人不存在'
+    }[result.error] || result.error));
+    return;
+  }
+  if (result && result.room) {
+    Room._broadcast(result.room, 'room_update', Room.getRoomPublic(result.room));
+  }
+}
 
 function handleUpdateSettings(ws, data) {
   if (!ws.roomCode) { ws.send(errorMsg('not_in_room', '不在房间中')); return; }

@@ -18,6 +18,8 @@ const CLIENT_MESSAGES = [
   'send_speech',
   'kick_player',
  'change_character',
+  'add_bot',
+  'remove_bot',
   'update_settings',
  'ping'
 ];

@@ -263,6 +263,25 @@ item.appendChild(ch);
     dom.targetOverlay.style.display = "none";
     dom.itemTargetHint.style.display = "none";
     state.selectingTarget = false;
+    // 本地即时扣分
+    var cost = state.selectedItemCount || 1;
+    if (state.room && state.room.players) {
+      for (var ui = 0; ui < state.room.players.length; ui++) {
+        if (state.room.players[ui].id === state.playerId) {
+          state.room.players[ui].score -= cost;
+          break;
+    }
+  }
+}
+    if (state.game && state.game.players) {
+      for (var ui = 0; ui < state.game.players.length; ui++) {
+        if (state.game.players[ui].id === state.playerId) {
+          state.game.players[ui].score -= cost;
+          break;
+    }
+  }
+      if (PK.TableRenderer && PK.TableRenderer.update) PK.TableRenderer.update(state.game);
+    }
     PK.WSClient.send("use_item", {
       itemType: state.selectedItem,
       targetPlayerId: targetId,
@@ -343,14 +362,26 @@ function onQuickSpeech() {
     var sc = document.createElement("div");
     sc.style.cssText = "overflow-y:auto;max-height:35vh;padding:6px 0;-webkit-overflow-scrolling:touch;";
     var phrases = [
-      {t:"1. 能不能快点啊？兵贵神速啊！",m:"words_0_1",f:"words_0_2"},
-      {t:"2. 你们忍心就这么让我酱油了？",m:"words_3_1",f:"words_3_2"},
-      {t:"3. 我、我惹你们了吗？",m:"words_4_1",f:"words_4_2"},
-      {t:"4. 姑娘你真是条汉子",m:"words_5_1",f:"words_5_2"},
-      {t:"5. 三十六计走为上",m:"words_6_1",f:"words_6_2"},
-      {t:"6. 风吹鸡蛋壳，牌去人安乐",m:"words_9_1",f:"words_9_2"}
+      {t:"惟贤惟德，能服于人",m:"SKILL_31_1_2",f:"SKILL_31_1_2",c:0},
+      {t:"以德服人",m:"SKILL_31_1_1",f:"SKILL_31_1_1",c:0},
+      {t:"能不能快点啊？兵贵神速啊！",m:"words_0_1",f:"words_0_2"},
+      {t:"你们忍心就这么让我酱油了？",m:"words_3_1",f:"words_3_2"},
+      {t:"我、我惹你们了吗？",m:"words_4_1",f:"words_4_2"},
+      {t:"姑娘你真是条汉子",m:"words_5_1",f:"words_5_2"},
+      {t:"三十六计走为上",m:"words_6_1",f:"words_6_2"},
+      {t:"风吹鸡蛋壳，牌去人安乐",m:"words_9_1",f:"words_9_2"}
     ];
+    var myCharId = 0;
+    if (state.room && state.room.players) {
+      for (var ci = 0; ci < state.room.players.length; ci++) {
+        if (state.room.players[ci].id === state.playerId) {
+          myCharId = state.room.players[ci].avatarId || 0;
+          break;
+        }
+      }
+    }
     for (var pi = 0; pi < phrases.length; pi++) {
+      if (phrases[pi].c !== undefined && phrases[pi].c !== myCharId) continue;
       var d = document.createElement("div");
       d.textContent = phrases[pi].t;
       d.dataset.idx = pi;
@@ -363,6 +394,7 @@ function onQuickSpeech() {
       var pi = parseInt(t.dataset.idx);
       var p = phrases[pi];
       if (!p) return;
+      if (p.c !== undefined && p.c !== myCharId) return;
       var text = p.t.replace(/^\d+\.\s*/,"");
       var g = "male";
       if (state.room && state.room.players) {
@@ -434,6 +466,7 @@ function onQuickSpeech() {
     renderRoom();
   }
 
+
   function renderRoom() {
     if (!state.room) return;
     var players = state.room.players || [];
@@ -453,10 +486,11 @@ function onQuickSpeech() {
       item.style.animationDelay = (i * 0.08) + "s";
 
       var statusClass = "status-waiting";
-      var statusText = "等待中";
+      var statusText = isBot ? "\U0001f916 \u673a\u5668\u4eba" : (p.isHost ? "\u623f\u4e3b" : (p.isReady ? "\u5df2\u51c6\u5907" : "\u7b49\u5f85\u4e2d"));
       if (p.isHost) { statusClass = "status-host"; statusText = "房主"; }
       else if (p.isReady) { statusClass = "status-ready"; statusText = "已准备"; }
 
+      var isBot = p.isBot || false;
       var avatarImg = avatarImages[p.avatarId] || avatarImages[0];
       item.innerHTML =
         '<div class="avatar avatar-img"><img src="' + avatarImg + '" alt=""></div>' +
@@ -469,6 +503,24 @@ function onQuickSpeech() {
     // 按钮状态
     var amReady = players.some(function (p) { return p.id === state.playerId && p.isReady; });
     dom.btnReady.style.display = state.isHost ? "none" : ""; dom.btnReady.textContent = amReady ? "取消准备" : "准备";
+    // Bot section
+    if (state.isHost) {
+      var oldBot = document.getElementById("bot-section");
+      if (oldBot) oldBot.remove();
+      var bd = document.createElement("div");
+      bd.id = "bot-section";
+      bd.style.cssText = "display:flex;gap:8px;padding:10px 16px;justify-content:center;margin-top:4px;";
+      var bls = [{n:"\u7b80\u5355",l:0},{n:"\u666e\u901a",l:1},{n:"\u56f0\u96be",l:2}];
+      for (var bi = 0; bi < bls.length; bi++) {(function(bl){
+        var btn = document.createElement("button");
+        btn.textContent = "\U0001f916" + bl.n + "\u673a\u5668\u4eba";
+        btn.style.cssText = "flex:1;padding:8px 12px;border:1px solid #4ECDC4;border-radius:8px;background:white;color:#4ECDC4;font-size:13px;cursor:pointer;text-align:center;";
+        btn.onclick = function(){PK.WSClient.send("add_bot",{level:bl.l});};
+        bd.appendChild(btn);
+      })(bls[bi]);}
+      list.parentNode.appendChild(bd);
+    }
+
     dom.btnStartGame.style.display = state.isHost ? "block" : "none";
     dom.btnStartGame.disabled = false;
   }

@@ -12,8 +12,9 @@
  */
 
 const { freshDeck, deal } = require('./deck');
-const { best5, compareHands } = require('./hand-eval');
+const { best5, compareHands, HandEvaluator } = require('./hand-eval');
 const { calculatePots, distributePots } = require('./pot');
+const BotAI = require('./bot-ai');
 
 class HandState {
   /**
@@ -149,6 +150,7 @@ class HandState {
    * 开始新的下注轮次
    */
   _startBettingRound() {
+    this._botIterCount = 0;
     // 检查是否所有人都已全下或弃牌
     const active = this.players.filter(p => !p.folded && !p.allIn);
     // 所有人全下 → 直接发完所有公共牌
