@@ -1,4 +1,4 @@
-/*** pixi-setup.js - Canvas 2D 渲染器（稳定版）
+﻿/*** pixi-setup.js - Canvas 2D 渲染器（稳定版）
  * 纯 Canvas API，零外部依赖
  */
 window.PK = window.PK || {};
@@ -19,7 +19,10 @@ PK.TableRenderer = (function () {
   function loadCharacterImages() {
     var charDefs = [
       { id: "liubei", src: "/assets/sprites/char_liubei.png" },
-      { id: "xiaosha", src: "/assets/sprites/char_xiaosha.png" }
+    { id: "xiaosha", src: "/assets/sprites/char_xiaosha.png" },
+     { id: "zhangfei", src: "/assets/sprites/char_zhangfei.png" },
+      { id: "guanyu", src: "/assets/sprites/char_guanyu.png" },
+      { id: "zhangchunhua", src: "/assets/sprites/char_zhangchunhua.png" }
     ];
     for (var i = 0; i < charDefs.length; i++) {
       (function (def) {
@@ -137,7 +140,17 @@ function drawStatic() {
   // 渲染场景
   function renderScene() {
     if (!ctx || !currentData) return;
-    var data = currentData, players = data.players || [];
+    var data = currentData, players = (data.players || []).slice(0);
+    // 添加淘汰（观战）玩家，灰显
+    var elimPlayers = data.eliminatedPlayers || [];
+    for (var ei = 0; ei < elimPlayers.length; ei++) {
+      elimPlayers[ei].folded = true;
+      elimPlayers[ei].cards = [];
+      elimPlayers[ei].totalBetThisHand = 0;
+      elimPlayers[ei].currentBet = 0;
+      elimPlayers[ei].allIn = false;
+      players.push(elimPlayers[ei]);
+    }
     cx = W/2; cy = H/2;
     var rx = Math.min(W*0.36, 260), ry = Math.min(H*0.28, 150);
     drawTable(cx, cy, rx, ry);
@@ -219,7 +232,7 @@ function drawStatic() {
     if (!p) return;
     var hr = rMin(20, W*0.035), bw = hr*1.5, bh = hr*1.6;
     var isFolded = p.folded;
-    var charIds = ["liubei", "xiaosha"];
+    var charIds = ["liubei", "xiaosha", "zhangfei", "guanyu", "zhangchunhua"];
     var charId = charIds[p.avatarId] || charIds[0];
     var charCanvas = charImages[charId];
 
@@ -480,8 +493,9 @@ function drawStatic() {
 
   function getSeatPos(playerId) {
     if (!currentData || !currentData.players) return null;
-    for (var i = 0; i < currentData.players.length; i++) {
-      if (currentData.players[i].id === playerId && seatPos[i]) {
+    var allPlayers = (currentData.players || []).concat(currentData.eliminatedPlayers || []);
+    for (var i = 0; i < allPlayers.length; i++) {
+      if (allPlayers[i].id === playerId && seatPos[i]) {
         return { x: seatPos[i].x, y: seatPos[i].y };
       }
     }

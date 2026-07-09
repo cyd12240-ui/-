@@ -1,4 +1,4 @@
-/**
+﻿/**
  * game-client.js - 客户端游戏管理
  * 负责屏幕切换、状态管理、UI 渲染
  */
@@ -25,7 +25,10 @@ PK.GameClient = (function () {
   var cachedRoomCode = "";
   var characters = [
     { id: "liubei", name: "刘备", gender: "male", icon: "/assets/sprites/char_liubei.png" },
-    { id: "xiaosha", name: "小杀", gender: "female", icon: "/assets/sprites/char_xiaosha.png" }
+    { id: "xiaosha", name: "小杀", gender: "female", icon: "/assets/sprites/char_xiaosha.png" },
+    { id: "zhangfei", name: "张飞", gender: "male", icon: "/assets/sprites/char_zhangfei.png" },
+    { id: "guanyu", name: "关羽", gender: "male", icon: "/assets/sprites/char_guanyu.png" },
+    { id: "zhangchunhua", name: "张春华", gender: "female", icon: "/assets/sprites/char_zhangchunhua.png" }
   ];
 
   function init() {
@@ -239,7 +242,7 @@ PK.GameClient = (function () {
     list.innerHTML = "";
     for (var i = 0; i < players.length; i++) {
       var p = players[i];
-      if (p.id === state.playerId) continue;
+      if (p.id === state.playerId || p.eliminated) continue;
       var item = document.createElement("div");
       item.className = "target-item slide-up";
       item.textContent = p.nickname;
@@ -295,7 +298,7 @@ item.appendChild(ch);
   if (state.room && state.room.players) {
     for (var i = 0; i < state.room.players.length; i++) {
       if (state.room.players[i].id === state.playerId) {
-        gender = (state.room.players[i].avatarId % 2 === 1) ? 'female' : 'male';
+        gender = (characters[state.room.players[i].avatarId] && characters[state.room.players[i].avatarId].gender === "female") ? 'female' : 'male';
       }
     }
   }
@@ -320,7 +323,10 @@ ov=document.createElement("div");ov.className="cov";ov.id="char-select-overlay";
 var box=document.createElement("div");box.className="cbx";
 var title=document.createElement("div");title.className="cti";title.textContent="选择角色";
 var opts=document.createElement("div");opts.className="cop";
-var ids=[["liubei","刘备","男",0],["xiaosha","小杀","女",1]];
+    var ids=[["liubei","刘备","男",0],["xiaosha","小杀","女",1]];
+    ids.push(["zhangfei","张飞","男",2]);
+    ids.push(["guanyu","关羽","男",3]);
+    ids.push(["zhangchunhua","张春华","女",4]);
 ids.forEach(function(a){
 var d=document.createElement("div");d.className="cot";
 d.onclick=function(){PK.WSClient.send("change_character",{avatarId:a[3]});ov.style.display="none";};
@@ -364,6 +370,14 @@ function onQuickSpeech() {
     var phrases = [
       {t:"惟贤惟德，能服于人",m:"SKILL_31_1_2",f:"SKILL_31_1_2",c:0},
       {t:"以德服人",m:"SKILL_31_1_1",f:"SKILL_31_1_1",c:0},
+      {t:"燕人张飞在此",m:"SKILL_34_3_1",f:"SKILL_34_3_1",c:2},
+      {t:"啊...",m:"SKILL_34_3_2",f:"SKILL_34_3_2",c:2},
+      {t:"看尔乃插标卖首",m:"SKILL_33_2_1",f:"SKILL_33_2_1",c:3},
+      {t:"关羽在此尔等受死",m:"SKILL_33_2_2",f:"SKILL_33_2_2",c:3},
+      {t:"女人也该对自己狠一点",m:"SKILL_16105_shangshi_2",f:"SKILL_16105_shangshi_2",c:4},
+      {t:"酒不醉人，人自醉，情不伤人，人自负",m:"SKILL_16105_shangshi_1",f:"SKILL_16105_shangshi_1",c:4},
+      {t:"花与年华逝，因妒自绝情",m:"SKILL_16105_jueqing_2",f:"SKILL_16105_jueqing_2",c:4},
+      {t:"多情不若绝情好",m:"SKILL_16105_jueqing_1",f:"SKILL_16105_jueqing_1",c:4},
       {t:"能不能快点啊？兵贵神速啊！",m:"words_0_1",f:"words_0_2"},
       {t:"你们忍心就这么让我酱油了？",m:"words_3_1",f:"words_3_2"},
       {t:"我、我惹你们了吗？",m:"words_4_1",f:"words_4_2"},
@@ -399,7 +413,7 @@ function onQuickSpeech() {
       var g = "male";
       if (state.room && state.room.players) {
         for (var j = 0; j < state.room.players.length; j++) {
-          if (state.room.players[j].id === state.playerId) { g = (state.room.players[j].avatarId % 2 === 1) ? "female" : "male"; break; }
+          if (state.room.players[j].id === state.playerId) { g = (characters[state.room.players[j].avatarId] && characters[state.room.players[j].avatarId].gender === "female") ? "female" : "male"; break; }
         }
       }
       var sn = (g === "female" ? p.f : p.m);
@@ -476,7 +490,10 @@ function onQuickSpeech() {
     // avatarId -> 角色图片映射
     var avatarImages = [
       "/assets/sprites/char_liubei.png",  // 0: 刘备
-      "/assets/sprites/char_xiaosha.png"  // 1: 小杀
+      "/assets/sprites/char_xiaosha.png",  // 1: 小杀
+      "/assets/sprites/char_zhangfei.png",  // 2: 张飞
+      "/assets/sprites/char_guanyu.png",  // 3: 关羽
+      "/assets/sprites/char_zhangchunhua.png"  // 4: 张春华
     ];
 
     for (var i = 0; i < players.length; i++) {
@@ -602,6 +619,9 @@ function onQuickSpeech() {
   function handleGameStarted(data) {
     showScreen("game");
     if (PK.TableRenderer) { PK.TableRenderer.clearEggSplat(); PK.TableRenderer.reset(); }
+    // 移除结算画面
+    var go = document.getElementById("gameover-overlay");
+    if (go) go.remove();
   }
 
   function handlePlayerDisconnected(data) {
@@ -638,6 +658,9 @@ function onQuickSpeech() {
     };
     dom.gamePhaseDisplay.textContent = phaseNames[data.phase] || data.phase || "";
 
+    var hc = data.handCount || 0;
+    var mh = data.maxHands || 0;
+    if (mh > 0) { dom.gamePhaseDisplay.textContent += " 第" + hc + "/" + mh + "局"; } else if (hc > 0) { dom.gamePhaseDisplay.textContent += " 第" + hc + "局"; }
     // 更新道具按钮状态
     updateItemButtons();
   }
@@ -659,11 +682,22 @@ function onQuickSpeech() {
     if (action.amount > 0) text += " " + action.amount + "分";
     entry.textContent = text;
     dom.actionLog.appendChild(entry);
+    if (PK.TableRenderer && PK.TableRenderer.addFloatText && PK.TableRenderer.getSeatPos) {
+      var sp = PK.TableRenderer.getSeatPos(action.playerId);
+      if (sp) PK.TableRenderer.addFloatText(sp.x, sp.y - 80, text, "#FFF176", "bold 14px sans-serif", 3000);
+    }
     dom.actionHistory.scrollTop = dom.actionHistory.scrollHeight;
     dom.actionHistory.style.display = "block";
   }
 
   function updateActionButtons() {
+    var scoreData = state.game && state.game.players ? state.game.players : (state.room ? state.room.players : null);
+    if (scoreData) { for (var si = 0; si < scoreData.length; si++) {
+      if (scoreData[si].id === state.playerId) {
+        dom.raiseSlider.setAttribute("max", scoreData[si].score || 2000);
+        if (parseInt(dom.raiseAmount.textContent) > scoreData[si].score) dom.raiseAmount.textContent = scoreData[si].score;
+        break; }
+    } }
     var btns = dom.actionBar.querySelectorAll(".btn-action");
     var hasFold = false;
     for (var i = 0; i < btns.length; i++) {
@@ -751,6 +785,9 @@ function onQuickSpeech() {
     PK.WSClient.on("settings_updated", function(data) {
       if (state.room) state.room.settings = data.settings;
     });
+    PK.WSClient.on("game_over", function(data) {
+      showGameOver(data);
+    });
     PK.WSClient.on("speech_received", function(data) {
       if (data && data.soundName && PK.Sound && data.playerId !== state.playerId) {
         PK.Sound.play(data.soundName);
@@ -777,6 +814,7 @@ function onQuickSpeech() {
     document.getElementById("setting-score").value = s.initialScore || 2000;
     document.getElementById("setting-max").value = s.maxPlayers || 6;
     document.getElementById("setting-auto").value = s.autoStartDelay || 3;
+    document.getElementById("setting-hands").value = s.maxHands || 0;
     dom.settingsOverlay.style.display = "flex";
   }
   function onSaveSettings() {
@@ -785,10 +823,61 @@ function onQuickSpeech() {
       bigBlind: parseInt(document.getElementById("setting-bb").value) || 20,
       initialScore: parseInt(document.getElementById("setting-score").value) || 2000,
       maxPlayers: parseInt(document.getElementById("setting-max").value) || 6,
-      autoStartDelay: parseInt(document.getElementById("setting-auto").value) || 3
+      autoStartDelay: parseInt(document.getElementById("setting-auto").value) || 3,
+      maxHands: parseInt(document.getElementById("setting-hands").value) || 0
     };
     PK.WSClient.send("update_settings", settings);
     dom.settingsOverlay.style.display = "none";
+  }
+
+  function showGameOver(data) {
+    // 移除旧的结算画面
+    var old = document.getElementById("gameover-overlay");
+    if (old) old.remove();
+    var ov = document.createElement("div");
+    ov.id = "gameover-overlay";
+    ov.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:20000;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;";
+    var title = document.createElement("div");
+    title.textContent = "游戏结束 - " + (data.label || "");
+    title.style.cssText = "color:#FFD700;font-size:24px;font-weight:bold;margin-bottom:20px;";
+    ov.appendChild(title);
+    var list = document.createElement("div");
+    list.style.cssText = "background:rgba(255,255,255,0.1);border-radius:12px;padding:16px;width:280px;max-height:400px;overflow-y:auto;";
+    var pdata = data.players || [];
+    // 按积分从高到低排序
+    pdata.sort(function(a,b) { return b.score - a.score; });
+    for (var si = 0; si < pdata.length; si++) {
+      var p = pdata[si];
+      var row = document.createElement("div");
+      row.style.cssText = "display:flex;justify-content:space-between;padding:10px 12px;border-bottom:" + (si < pdata.length-1 ? "1px solid rgba(255,255,255,0.1)" : "none") + ";align-items:center;";
+      var nameEl = document.createElement("span");
+      nameEl.textContent = p.nickname + (p.isEliminated ? " (已淘汰)" : "");
+      nameEl.style.cssText = "color:#fff;font-size:15px;";
+      var scoreEl = document.createElement("span");
+      scoreEl.textContent = p.score + "分";
+      scoreEl.style.cssText = "color:" + (p.isEliminated ? "#EF9A9A" : "#A5D6A7") + ";font-size:15px;font-weight:bold;";
+      row.appendChild(nameEl);
+      row.appendChild(scoreEl);
+      list.appendChild(row);
+    }
+    ov.appendChild(list);
+    var btnBox = document.createElement("div");
+    btnBox.style.cssText = "display:flex;gap:12px;margin-top:20px;";
+    var btnBack = document.createElement("button");
+    btnBack.textContent = "返回大厅";
+    btnBack.style.cssText = "padding:10px 32px;background:#FF6B6B;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;";
+    btnBack.onclick = function() {
+      ov.remove();
+      onLeaveRoom();
+    };
+    btnBox.appendChild(btnBack);
+    // 房主可以重新开始
+    if (state.isHost) {
+      document.getElementById("btn-start-game").textContent = "重新开始";
+      document.getElementById("btn-start-game").style.display = "block";
+    }
+    ov.appendChild(btnBox);
+    document.body.appendChild(ov);
   }
 
   return {
@@ -803,7 +892,6 @@ function onQuickSpeech() {
     handlePlayerTurn: handlePlayerTurn
   };
 })();
-
 
 
 

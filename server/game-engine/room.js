@@ -23,7 +23,8 @@ const DEFAULT_SETTINGS = {
  autoUpgradeBlinds: false,
  autoStartDelay: 3,
   maxPlayers: 6,
-  minPlayers: 2
+  minPlayers: 2,
+  maxHands: 0
 };
 
 /**
@@ -168,7 +169,7 @@ function startGame(code, hostId) {
   const room = rooms.get(code);
   if (!room) return { error: 'room_not_found' };
   if (room.hostId !== hostId) return { error: 'not_host' };
-  if (room.phase !== 'waiting') return { error: 'game_in_progress' };
+  if (room.phase !== 'waiting' && room.phase !== 'gameover') return { error: 'game_in_progress' };
   if (room.players.length < room.settings.minPlayers) {
     return { error: 'not_enough_players' };
   }
@@ -177,9 +178,10 @@ function startGame(code, hostId) {
   room.handCount = 0;
   room.currentDealer = -1;
 
-  // 重置积分
+  // 重置积分（包括淘汰玩家）
   for (const p of room.players) {
     p.score = room.settings.initialScore;
+    p.eliminated = false;
   }
 
   startNextHand(room);
@@ -192,20 +194,31 @@ function startGame(code, hostId) {
  * 开始下一局
  */
 function startNextHand(room) {
-  // 移除已淘汰玩家
-  room.players = room.players.filter(p => p.score > 0);
+  // 标记积分归零的玩家为"已淘汰"（观战模式）
+  for (var pi = 0; pi < room.players.length; pi++) {
+    if (room.players[pi].score <= 0) {
+      room.players[pi].eliminated = true;
+    }
+  }
 
-  if (room.players.length <= 1) {
-    room.phase = 'gameover';
-    const winner = room.players[0];
+  // 检查最大对局数
+  if (room.settings.maxHands > 0 && room.handCount >= room.settings.maxHands) {
+    triggerGameOver(room, 'max_hands', '达到最大对局数');
+    return;
+  }
+
+  // 检查是否只剩一位未淘汰玩家
+  var activePlayers = room.players.filter(function(p) { return !p.eliminated; });
+  if (activePlayers.length <= 1) {
+    triggerGameOver(room, 'last_standing', '只剩一位有积分的玩家');
     return;
   }
 
   room.handCount++;
-  room.currentDealer = (room.currentDealer + 1) % room.players.length;
+  room.currentDealer = (room.currentDealer + 1) % activePlayers.length;
 
   // 创建牌局
-  const hand = new HandState(room.players, room.currentDealer, {
+  const hand = new HandState(activePlayers, room.currentDealer, {
     small: room.settings.smallBlind,
     big: room.settings.bigBlind
   });
@@ -219,9 +232,15 @@ function startNextHand(room) {
     }
   }
 
-  hand.onEvent((event, data) => {
+ hand.onEvent((event, data) => {
+    // 添加对局数信息到游戏事件
+    if (event === 'handDealt' || event === 'actionResult' || event === 'roundAdvanced' || event === 'showdown' || event === 'playerTurn') {
+      if (data && typeof data === 'object') {
+        data.handCount = room.handCount;
+        data.maxHands = room.settings.maxHands;
+      }
+    }
     if (event === 'handEnd' || event === 'playerTurn' || event === 'item_anim' || event === 'error') {
-      // 这些事件不包含手牌信息，可直接广播
       _broadcast(room, event, data);
 
       if (event === 'handEnd') {
@@ -247,6 +266,10 @@ function startNextHand(room) {
       for (const p of room.players) {
         if (p.ws && p.ws.readyState === 1) {
           const playerState = hand._getPublicState(p.id);
+          // 添加淘汰的观战玩家
+          playerState.handCount = room.handCount;
+          playerState.maxHands = room.settings.maxHands;
+          playerState.eliminatedPlayers = room.players.filter(function(ep) { return ep.eliminated; }).map(function(ep) { return { id: ep.id, nickname: ep.nickname, avatarId: ep.avatarId, score: ep.score, eliminated: true }; });
           try { p.ws.send(JSON.stringify({ type: event, data: playerState })); } catch (e) {}
         }
       }
@@ -368,7 +391,8 @@ function getRoomPublic(room) {
       isHost: p.isHost,
       isReady: p.isReady,
       isConnected: p.isConnected,
-      isBot: !!p.isBot
+      isBot: !!p.isBot,
+      eliminated: !!p.eliminated
     })),
     settings: room.settings,
     handCount: room.handCount
@@ -385,7 +409,7 @@ function updateSettings(code, hostId, newSettings) {
   if (room.hostId !== hostId) return { error: 'not_host' };
   if (room.phase !== 'waiting') return { error: 'game_in_progress' };
 
-  const allowed = ['smallBlind', 'bigBlind', 'initialScore', 'maxPlayers', 'minPlayers', 'autoStartDelay'];
+  const allowed = ['smallBlind', 'bigBlind', 'initialScore', 'maxPlayers', 'minPlayers', 'autoStartDelay', 'maxHands'];
   for (const key of allowed) {
     if (newSettings[key] !== undefined) {
       room.settings[key] = newSettings[key];
@@ -396,6 +420,7 @@ function updateSettings(code, hostId, newSettings) {
 }
 
 module.exports = {
+  triggerGameOver,
   addBot,
   removeBot,
   createRoom,
@@ -417,3 +442,25 @@ module.exports = {
 
 
 
+/**
+ * 触发游戏结束（结算画面）
+ */
+function triggerGameOver(room, reason, label) {
+  room.phase = 'gameover';
+  _broadcast(room, 'game_over', {
+    reason: reason,
+    label: label,
+    players: room.players.map(function(p) { return {
+      id: p.id,
+      nickname: p.nickname,
+      score: p.score,
+      isEliminated: !!p.eliminated
+    };})
+  });
+}
+
+
+
+/**
+ * 更新房间设置（仅房主）
+ */

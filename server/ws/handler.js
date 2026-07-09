@@ -248,6 +248,11 @@ function handleUseItem(ws, data) {
     ws.send(errorMsg('invalid_input', '目标玩家不存在'));
     return;
   }
+  // 验证目标未被淘汰
+  if (target.eliminated) {
+    ws.send(errorMsg('invalid_input', '目标玩家已淘汰'));
+    return;
+  }
 
   // 验证积分
   const cost = (count || 1);

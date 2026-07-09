@@ -39,7 +39,7 @@ function playMP3(name){
 
 var audioBuffers={},audioEls={},audioReady={};
 function preloadAudio(){
-  ["egg_throw","egg_hit","flower_throw","flower_hit","Tuoxie1","Tuoxie2","words_0_1","words_0_2","words_3_1","words_3_2","words_4_1","words_4_2","words_5_1","words_5_2","words_6_1","words_6_2","words_9_1","words_9_2","SKILL_31_1_1","SKILL_31_1_2","words_0_1","words_0_2","words_3_1","words_3_2","words_4_1","words_4_2","words_5_1","words_5_2","words_6_1","words_6_2","words_9_1","words_9_2","SKILL_31_1_1","SKILL_31_1_2","words_0_1","words_0_2","words_3_1","words_3_2","words_4_1","words_4_2","words_5_1","words_5_2","words_6_1","words_6_2","words_9_1","words_9_2"].forEach(function(n){
+  ["egg_throw","egg_hit","flower_throw","flower_hit","Tuoxie1","Tuoxie2","words_0_1","words_0_2","words_3_1","words_3_2","words_4_1","words_4_2","words_5_1","words_5_2","words_6_1","words_6_2","words_9_1","words_9_2","SKILL_31_1_1","SKILL_31_1_2","words_0_1","words_0_2","words_3_1","words_3_2","words_4_1","words_4_2","words_5_1","words_5_2","words_6_1","words_6_2","words_9_1","words_9_2","SKILL_31_1_1","SKILL_31_1_2","words_0_1","words_0_2","words_3_1","words_3_2","words_4_1","words_4_2","words_5_1","words_5_2","words_6_1","words_6_2","words_9_1","words_9_2","SKILL_34_3_1","SKILL_34_3_2","SKILL_33_2_1","SKILL_33_2_2","SKILL_16105_shangshi_1","SKILL_16105_shangshi_2","SKILL_16105_jueqing_1","SKILL_16105_jueqing_2"].forEach(function(n){
     // Preload HTMLAudioElement for instant playback
     var a=new Audio();a.src="/assets/sounds/"+n+".mp3";a.load();audioEls[n]=a;
     // Also decode via Web Audio API for parallel playback
