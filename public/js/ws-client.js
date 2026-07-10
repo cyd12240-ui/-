@@ -11,8 +11,9 @@ PK.WSClient = (function () {
   let reconnectTimer = null;
   let reconnectAttempts = 0;
   let pingInterval = null;
-  const handlers = {};
-  let onOpenCallback = null;
+ const handlers = {};
+ let onOpenCallback = null;
+ var sendQueue = [];
 
   function connect() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
@@ -28,12 +29,17 @@ PK.WSClient = (function () {
       return;
     }
 
-    ws.onopen = function () {
-      console.log("[WS] Connected");
-      connected = true;
-      reconnectAttempts = 0;
-      startPing();
-      if (onOpenCallback) onOpenCallback();
+   ws.onopen = function () {
+     console.log("[WS] Connected");
+     connected = true;
+     reconnectAttempts = 0;
+     // 发送积压的消息
+     for (var i = 0; i < sendQueue.length; i++) {
+       ws.send(JSON.stringify(sendQueue[i]));
+     }
+     sendQueue = [];
+     startPing();
+     if (onOpenCallback) onOpenCallback();
     };
 
     ws.onmessage = function (event) {
@@ -84,15 +90,24 @@ PK.WSClient = (function () {
     }
   }
 
-  function send(type, data) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn("[WS] Cannot send, not connected:", type);
-      return false;
-    }
-    var msg = JSON.stringify({ type: type, data: data || {} });
-    ws.send(msg);
-    return true;
-  }
+ function send(type, data) {
+   if (ws && ws.readyState === WebSocket.OPEN) {
+     var msg = JSON.stringify({ type: type, data: data || {} });
+     ws.send(msg);
+     return true;
+   }
+   // 未连接时排队等候
+   if (ws && ws.readyState === WebSocket.CONNECTING) {
+     sendQueue.push({ type: type, data: data || {} });
+     return true;
+   }
+   // WS 未连接或已关闭时也排队，并触发连接
+   sendQueue.push({ type: type, data: data || {} });
+   if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+     connect();
+   }
+   return true;
+ }
 
   function on(type, callback) {
     if (!handlers[type]) handlers[type] = [];

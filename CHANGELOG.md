@@ -57,3 +57,22 @@
 
 ---
 当前版本：V2.2  |  服务器端口：3009
+
+---
+
+## V2.2 → V2.3 — 前端模块化重构 + WS 消息队列
+
+### 模块拆分
+- game-client.js (38KB) → 5 个模块：screen.js / room-ui.js / game-ui.js / item-system.js + game-client.js (14KB 协调器)
+- pixi-setup.js (22KB) → 6 个模块：table.js / cards.js / avatars.js / items.js / ui-overlay.js + pixi-setup.js (12KB 编排器)
+- prop-throw.js → 合并到 renderer/items.js
+
+### WS 修复
+- 新增 sendQueue 排队机制：WS 未连接时消息自动排队，连接后自动发送
+- 覆盖 CONNECTING / CLOSED / CLOSING 三种状态
+
+### 文件变化
+- 2 个文件 → 14 个文件（均遵循 DESIGN.md 规范结构）
+- 所有模块通过 PK.* 命名空间挂载，共享状态通过 PK.GameClient.state/dom + PK.TableRenderer.__ 暴露
+
+当前版本：V2.3  |  服务端端口：3009
