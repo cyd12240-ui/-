@@ -1,3 +1,75 @@
+---
+
+## V2.3 -> V2.4 - Bot stuck fix + Liquid Glass lobby + table bg image
+
+### Bot system refactoring
+- **Synchronous _processBotAction** - Removed setTimeout/setImmediate, eliminated 300ms race condition
+- **Real-time game state** - callAmount/pot/minRaise/currentBet computed at decision time, no stale snapshots
+- **Deadlock prevention** - Auto-advance when playersToAct is empty but bets unmatched
+- **Skip folded/allIn bots** - Already-out players removed from queue and chain continues
+- **Uncaught exception handler** - crash_logger.js prevents server crash on unhandled errors
+
+### Homepage redesign (Liquid Glass)
+- Glassmorphism card with backdrop-filter blur and ambient sweep animation
+- Pointer-following specular highlight + ambient drift (touch compatible)
+- Dark gradient overlay + optional background video (sgs.mp4)
+- Entrance animations (card scale-in / element slide-in / divider fade-in)
+
+### Table background
+- Full-screen background image support (replace public/assets/sprites/table_bg.png)
+- Canvas gradient fallback while image loads
+- Kept border ink lines and corner decorations
+
+### Card position adjustment
+- Player hand vertical offset: 140px -> 100px from bottom (moved down 40px)
+
+### Documentation
+- Updated CHANGELOG.md
+- Updated current-progress.md
+
+### File changes
+- **Modified**: server/game-engine/game-state.js / public/js/renderer/pixi-setup.js / public/js/renderer/table.js / public/js/game-client.js
+- **Added**: server/crash_logger.js / public/assets/sprites/sgs.mp4
+- **Rewritten**: public/index.html / public/css/style.css / public/js/main.js
+
+Current version: V2.4  |  Server port: 3009 (default) / 3012 (alternate)
+---
+---
+
+## V2.3 → V2.4 — 机器人卡死修复 + Liquid Glass 首页 + 牌局背景图
+
+### 机器人系统重构
+- **_processBotAction 完全同步化** — 移除 setTimeout/setImmediate，消除 300ms 窗??竞争条件
+- **游戏状态实时计算** — callAmount/pot/minRaise/currentBet 在决策?实时计算，??再使用过期快照
+- **防卡死兜底机制** — playersToAct 空队列下注不匹配?自?推进轮次(_autoAdvanceStuckRound)
+- **折叠/全下跳过检查** — 已出局机器人自删除并触发下一个
+- **链式调用永不断** — 机制人过牌/弃牌?同步触发下一个，保证?会跳过轮次
+- **全局异常捕获** — process.on('uncaughtException') + crash_logger.js，异常不崩服
+
+### 首页重设计 (Liquid Glass)
+- 毛玻璃卡片效果 (backdrop-filter blur + ambient sweep animation)
+- 指针跟随镜面高光 + ??环境光漂移（touch 兼容）
+- 深色渐变背景 + ??背景视频（sgs.mp4）
+- 交互动画（卡片入场缩放 / 元素滑入 / 分隔线淡入）
+
+### 牌局背景图
+- 支持全屏背景图替换（覆盖 public/assets/sprites/table_bg.png）
+- 桌面从 Canvas 渐变绘制改为图片绘制，保留边框装饰
+- 图片???完前回退到暖色渐变
+
+### 卡片位置调整
+- 玩家手牌垂直位置从底部偏移 140px → 100px，整?往下移
+
+### 文档维护
+- 更新 CHANGELOG.md
+- 更新 current-progress.md（?加 V2.4 完成列?）
+
+### 文件变化
+- **修改**: server/game-engine/game-state.js / public/js/renderer/pixi-setup.js / public/js/renderer/table.js / public/js/game-client.js
+- **新增**: server/crash_logger.js / public/assets/sprites/sgs.mp4
+- **重写**: public/index.html / public/css/style.css / public/js/main.js
+
+当前版本：V2.4  |  服务端端口：3009（默认） / 3012（??）
 # 朋友局德州扑克 — 版本更新报告（V1 → V2.2）
 
 ---
