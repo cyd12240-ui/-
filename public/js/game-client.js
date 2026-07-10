@@ -606,7 +606,7 @@ function onQuickSpeech() {
     }
     if (data.itemType === "egg" && PK.TableRenderer && PK.TableRenderer.setEggSplat) {
       PK.TableRenderer.setEggSplat(data.toPlayerId);
-      // 8秒后自动清除蛋液黄色圈
+      // 4秒后自动清除蛋液黄色圈
       if (window._eggSplatTimer) clearTimeout(window._eggSplatTimer);
       window._eggSplatTimer = setTimeout(function() {
         if (PK.TableRenderer && PK.TableRenderer.clearEggSplat) {
