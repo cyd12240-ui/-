@@ -233,6 +233,7 @@ PK.GameClient = (function () {
   function handlePlayerTurn(data) {
     state.myTurn = (data.currentPlayerId === state.playerId);
     state.availableActions = data.availableActions || [];
+    console.log('[Turn] myTurn=' + state.myTurn + ' actions=' + JSON.stringify(state.availableActions) + ' currentPlayer=' + data.currentPlayerId);
     PK.GameUI.updateActionButtons();
     if (PK.TableRenderer) PK.TableRenderer.highlightPlayer(data.currentPlayerId);
   }

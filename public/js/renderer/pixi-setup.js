@@ -9,6 +9,7 @@ PK.TableRenderer = (function () {
   var eggSplat = {};
   var charImages = {};
   var eggCanvas = null, flowerCanvas = null, flowerFlyCanvas = null;
+var tableBgCanvas = null;
   var animFrame = null;
   var currentData = null;
   var W = 0, H = 0, cx = 0, cy = 0;
@@ -35,6 +36,8 @@ PK.TableRenderer = (function () {
     get myId() { return myId; },
     set myId(v) { myId = v; },
     get charImages() { return charImages; },
+    get tableBgCanvas() { return tableBgCanvas; },
+    set tableBgCanvas(v) { tableBgCanvas = v; },
     get eggCanvas() { return eggCanvas; },
     set eggCanvas(v) { eggCanvas = v; },
     get flowerCanvas() { return flowerCanvas; },
@@ -66,6 +69,7 @@ PK.TableRenderer = (function () {
       ctx.scale(dpr, dpr);
       container.appendChild(canvas);
       loadEggImage(); loadFlowerImage(); loadCharacterImages();
+      loadTableBgImage();
       window.addEventListener("resize", resize);
       if (PK.TableRenderer.Table) PK.TableRenderer.Table.drawStatic();
       requestAnimationFrame(loop);
@@ -122,7 +126,7 @@ PK.TableRenderer = (function () {
     var rx = rMin(W*0.36, 260), ry = rMin(H*0.28, 150);
 
     // 桌子
-    if (PK.TableRenderer.Table) PK.TableRenderer.Table.drawTable(ctx, cx, cy, rx, ry);
+    if (PK.TableRenderer.Table && PK.TableRenderer.Table.drawBackground) PK.TableRenderer.Table.drawBackground(ctx, W, H);
     else { ctx.fillStyle = "#C89B5E"; ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.fill(); }
 
     // 座位
@@ -165,7 +169,7 @@ PK.TableRenderer = (function () {
         var sc = im ? rMin(1.3,W*0.05) : rMin(0.55,W*0.001);
         var pw = 50*sc, ph2 = 70*sc;
         var px2 = im ? cx-pw-4 : sp.cx-pw/2;
-        var py2 = im ? H-ph2-140 : sp.cy-ph2/2;
+        var py2 = im ? H-ph2-100 : sp.cy-ph2/2;
         for (var c = 0; c < Math.min(p.cards.length, 2); c++) {
           if (im && p.cards[c]) PK.TableRenderer.Cards.drawCard(ctx, px2+c*(pw+4), py2, p.cards[c].rank, p.cards[c].suit, sc);
           else PK.TableRenderer.Cards.drawCardBack(ctx, px2+c*(pw+4), py2, sc);
@@ -221,6 +225,20 @@ PK.TableRenderer = (function () {
       flowerFlyCanvas=oc;
     };img.src="/assets/sprites/flower_fly.png";
   }
+
+  function loadTableBgImage(){
+    var img = new Image();
+    img.onload = function(){
+      var oc = document.createElement("canvas");
+      oc.width = img.width;
+      oc.height = img.height;
+      var octx = oc.getContext("2d");
+      octx.drawImage(img, 0, 0);
+      tableBgCanvas = oc;
+    };
+    img.src = "/assets/sprites/table_bg.png";
+  }
+
   function loadCharacterImages(){
     var defs=[["liubei","/assets/sprites/char_liubei.png"],["xiaosha","/assets/sprites/char_xiaosha.png"],["zhangfei","/assets/sprites/char_zhangfei.png"],["guanyu","/assets/sprites/char_guanyu.png"],["zhangchunhua","/assets/sprites/char_zhangchunhua.png"]];
     for(var i=0;i<defs.length;i++)(function(id,src){
@@ -260,4 +278,5 @@ PK.TableRenderer = (function () {
     }
   };
 })();
+
 

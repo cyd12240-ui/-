@@ -252,10 +252,22 @@ class HandState {
       this._advancePhase();
    } else {
       this._emit('playerTurn', this._getTurnState());
-      // 如果下一个是机器人，自动触发
+      // 如果下一个是机器人，自动触发（同步链式调用确保永不断）
       var nextIdx2 = this.playersToAct.length > 0 ? this.playersToAct[0] : -1;
       if (nextIdx2 >= 0 && this.players[nextIdx2].isBot && !this.handOver) {
         this._processBotAction(nextIdx2);
+      }
+      // 防卡死：如果 playersToAct 非空但没人触发（例如不是机器人），交给心跳
+      if (!this.handOver && this.playersToAct.length > 0) {
+        var checkIdx = this.playersToAct[0];
+        if (checkIdx >= 0 && !this.players[checkIdx].isBot) {
+          // 人类玩家 — 正常，等 WS 消息
+        } else if (checkIdx >= 0 && this.players[checkIdx].isBot && this.players[checkIdx].folded) {
+          // 机器人在队列里但已弃牌 → 清理并继续
+          this.playersToAct.shift();
+          this._emit('actionResult', this._getPublicState());
+          if (!this._isBettingRoundOver()) this._advancePhase();
+        }
       }
     }
 
@@ -379,17 +391,16 @@ class HandState {
  _isBettingRoundOver() {
     const active = this.players.filter(p => !p.folded && !p.allIn);
 
-    // 只剩一个活跃玩家 → 他直接赢
     if (active.length <= 1) return true;
-
-    // 没有活跃玩家（所有人全下或弃牌）
     if (active.length === 0) return true;
-
-    // 还有玩家需要行动
     if (this.playersToAct.length > 0) return false;
 
-    // 所有人都已行动且下注额匹配
     const allMatched = active.every(p => p.currentBet === this.currentBet);
+    if (!allMatched) {
+      // 防卡死：playersToAct 已空但下注不匹配 → 日志警告后强行结束
+      console.warn('[Game] Round stuck: playersToAct empty but bets not matched. Forcing advance.');
+      return true;
+    }
     return allMatched;
   }
 
@@ -631,30 +642,51 @@ class HandState {
    * 自动处理机器人行动（AI 决策 + 执行）
    */
   _processBotAction(playerIdx) {
-    const player = this.players[playerIdx];
-    if (!player || !player.isBot || this.handOver) return;
-    const callAmount = this.currentBet - player.currentBet;
-    const gs = {
-      callAmount: Math.max(0, callAmount),
-      pot: this.players.reduce(function(s, p) { return s + p.totalBetThisHand; }, 0),
-      communityCards: this.communityCards,
-      minRaise: this.minRaise,
-      canCheck: callAmount <= 0,
-      canRaise: player.score > callAmount * 2 || player.score > this.minRaise
-    };
-    const self = this;
-    setTimeout(function() {
-      if (self.handOver) return;
-      if (self.playersToAct.length === 0 || self.playersToAct[0] !== playerIdx) return;
-     try {
+      if (this.handOver) return;
+      if (this.playersToAct.length === 0 || this.playersToAct[0] !== playerIdx) return;
+      const player = this.players[playerIdx];
+      if (!player || !player.isBot) return;
+      try {
+        const callAmount = this.currentBet - player.currentBet;
+        const gs = {
+          callAmount: Math.max(0, callAmount),
+          pot: this.players.reduce(function(s, p) { return s + p.totalBetThisHand; }, 0),
+          communityCards: this.communityCards,
+          minRaise: this.minRaise,
+          canCheck: callAmount <= 0,
+          canRaise: player.score > callAmount * 2 || player.score > this.minRaise
+        };
         var d = BotAI.decide(player, gs, player.botLevel || 0, HandEvaluator);
-        var r = self.processAction(player.id, d.action, d.amount || 0);
-        if (r && r.error) { self.processAction(player.id, 'fold', 0); }
+        if (!d || !d.action) return;
+        var r = this.processAction(player.id, d.action, d.amount || 0);
+        if (r && r.error) {
+          console.warn('[Bot] fallback fold for', player.id, ':', r.error);
+          try { this.processAction(player.id, 'fold', 0); } catch(ef) {
+            console.error('[Bot] fold fallback also failed:', ef);
+            // 兜底：强行结束这一轮
+            if (!this.handOver) {
+              this._autoAdvanceStuckRound();
+            }
+          }
+        }
       } catch(e) {
         console.error('[Bot] AI error:', e);
-        self.processAction(player.id, 'fold', 0);
+        try { this.processAction(player.id, 'fold', 0); } catch(ef) {
+          if (!this.handOver) this._autoAdvanceStuckRound();
+        }
       }
-    }, 300 + Math.random() * 400);
+  }
+  
+  /** 防卡死：强行结束当前下注轮 */
+  _autoAdvanceStuckRound() {
+    console.warn('[Game] Auto-advancing stuck round');
+    if (this.handOver) return;
+    const active = this.players.filter(p => !p.folded && !p.allIn);
+    if (active.length <= 1) {
+      this._handleLastManStanding();
+    } else {
+      this._advancePhase();
+    }
   }
 }
 
