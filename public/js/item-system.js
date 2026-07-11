@@ -132,7 +132,7 @@ PK.ItemSystem = (function () {
       ov.appendChild(itemRow);
 
       // 发言列表
-      var sc = document.createElement("div");
+      var sc = document.createElement("div"); ov._sc = sc;
       sc.style.cssText = "overflow-y:auto;max-height:35vh;padding:6px 0;-webkit-overflow-scrolling:touch;";
       var myCharId = 0;
       if (state && state.room && state.room.players) {
@@ -185,6 +185,25 @@ PK.ItemSystem = (function () {
       cb.onclick = function(){ov.style.display="none";};
       ov.appendChild(cb);
       document.body.appendChild(ov);
+    } else {
+      var sc = ov._sc;
+      if (sc) {
+        sc.innerHTML = "";
+        var myCharId = 0;
+        if (state && state.room && state.room.players) {
+          for (var ci = 0; ci < state.room.players.length; ci++) {
+            if (state.room.players[ci].id === state.playerId) { myCharId = state.room.players[ci].avatarId || 0; break; }
+          }
+        }
+        for (var pi = 0; pi < phrases.length; pi++) {
+          if (phrases[pi].c !== undefined && phrases[pi].c !== myCharId) continue;
+          var d = document.createElement("div");
+          d.textContent = phrases[pi].t;
+          d.dataset.idx = pi;
+          d.style.cssText = "padding:8px 10px;color:#FFE082;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.08);cursor:pointer;pointer-events:auto;";
+          sc.appendChild(d);
+        }
+      }
     }
     ov.style.display = "flex";
     // 更新按钮状态
