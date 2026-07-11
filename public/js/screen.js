@@ -15,6 +15,12 @@ PK.ScreenManager = (function () {
     if (PK.GameClient && PK.GameClient.state) PK.GameClient.state.screen = name;
     if (name === "game" && PK.TableRenderer) PK.TableRenderer.start();
     if (name !== "game" && PK.TableRenderer) PK.TableRenderer.stop();
+    // Play/pause game video on screen switch
+    var gv = document.querySelector(".game-video");
+    if (gv) {
+      if (name === "game") { try { gv.play(); } catch(e) {} }
+      else { gv.pause(); }
+    }
   }
 
   return { showScreen: showScreen };

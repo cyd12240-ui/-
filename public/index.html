@@ -8,12 +8,14 @@
 </head>
 <body>
 
+<!-- 全局玻璃背景：视频 + 蒙层（大厅 / 房间 共用，牌局用自己的绿呢桌背景） -->
+<video id="app-bg-video" class="lobby-video" autoplay muted loop playsinline>
+  <source src="/assets/sprites/sgs.mp4" type="video/mp4">
+</video>
+<div class="lobby-bg-overlay"></div>
+
 <!-- Lobby - Liquid Glass -->
 <div id="screen-lobby" class="screen active">
-  <video class="lobby-video" autoplay muted loop playsinline>
-    <source src="/assets/sprites/sgs.mp4" type="video/mp4">
-  </video>
-  <div class="lobby-bg-overlay"></div>
   <div class="lobby-stage">
     <div class="glass-card" id="glassCard">
       <div class="brand">
@@ -39,21 +41,21 @@
 </div>
 <!-- Room -->
 <div id="screen-room" class="screen">
-  <div class="room-header">
+  <div class="room-header glass-header">
     <span>房间：<strong class="room-code-display" id="room-code-display">----</strong></span>
     <span id="room-code-tap" class="tap-hint">复制</span>
-    <button id="btn-change-char" class="btn-change-char" title="更换角色">
+    <button id="btn-change-char" class="btn-change-char glass-round-btn" title="更换角色">
       <img src="/assets/sprites/btn_change_char.png" alt="换角色">
     </button>
-    <button id="btn-room-settings" class="btn-change-char" title="房间设置" style="right:60px;display:none">
+    <button id="btn-room-settings" class="btn-change-char glass-round-btn" title="房间设置" style="right:60px;display:none">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
   <div id="player-list" class="player-list"></div>
-  <div class="room-footer">
-    <button id="btn-ready" class="btn btn-primary">准备</button>
-    <button id="btn-start-game" class="btn btn-secondary" style="display:none">开始游戏</button>
-    <button id="btn-leave-room" class="btn btn-ghost">离开</button>
+  <div class="room-footer glass-footer">
+    <button id="btn-ready" class="btn btn-glass-primary">准备</button>
+    <button id="btn-start-game" class="btn btn-glass-secondary" style="display:none">开始游戏</button>
+    <button id="btn-leave-room" class="btn btn-glass-ghost">离开</button>
   </div>
 </div>
 
@@ -95,7 +97,7 @@
       <label class="sfl"><span>最大局数</span><input type="number" id="setting-hands" class="sfi" min="0" max="200" value="0"><span class="sft">0=不限</span></label>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px;">
-      <button id="btn-save-settings" class="ccl" style="flex:1;background:var(--accent-cool);">保存</button>
+      <button id="btn-save-settings" class="ccl ccl-accent" style="flex:1;">保存</button>
       <button id="btn-close-settings" class="ccl" style="flex:1;">关闭</button>
     </div>
   </div>
